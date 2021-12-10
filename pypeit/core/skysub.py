@@ -46,8 +46,10 @@ def skysub_npoly(thismask):
     return npoly
 
 
-def global_skysub(image, ivar, tilts, thismask, slit_left, slit_righ, inmask=None, bsp=0.6, sigrej=3.0, maxiter=35,
-                  trim_edg=(3,3), pos_mask=True, show_fit=False, no_poly=False, npoly=None):
+def global_skysub(image, ivar, tilts, thismask, slit_left, slit_righ, 
+                  inmask=None, bsp=0.6, sigrej=3.0, maxiter=35,
+                  trim_edg=(3,3), pos_mask=True, show_fit=False, 
+                  no_poly=False, npoly=None):
     """
     Perform global sky subtraction on an input slit
 

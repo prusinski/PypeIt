@@ -677,13 +677,15 @@ class Reduce:
                 continue
 
             # Find sky
-            self.global_sky[thismask] = skysub.global_skysub(self.sciImg.image, self.sciImg.ivar, self.tilts,
-                                                             thismask, self.slits_left[:,slit_idx],
-                                                             self.slits_right[:,slit_idx],
-                                                             inmask=inmask, sigrej=sigrej,
-                                                             bsp=self.par['reduce']['skysub']['bspline_spacing'],
-                                                             no_poly=self.par['reduce']['skysub']['no_poly'],
-                                                             pos_mask=(not self.ir_redux), show_fit=show_fit)
+            self.global_sky[thismask] = skysub.global_skysub(
+                self.sciImg.image, self.sciImg.ivar, self.tilts,
+                thismask, self.slits_left[:,slit_idx],
+                self.slits_right[:,slit_idx],
+                inmask=inmask, sigrej=sigrej,
+                bsp=self.par['reduce']['skysub']['bspline_spacing'],
+                no_poly=self.par['reduce']['skysub']['no_poly'],
+                pos_mask=(not self.ir_redux), show_fit=show_fit)
+
             # Mask if something went wrong
             if np.sum(self.global_sky[thismask]) == 0.:
                 msgs.warn("Bad fit to sky.  Rejecting slit: {:d}".format(slit_idx))
