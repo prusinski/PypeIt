@@ -769,10 +769,22 @@ def local_skysub_extract(sciimg, sciivar, tilts, waveimg, global_sky, thismask, 
                                            skyimage, box_rad, sobjs[iobj], base_var=base_var,
                                            count_scale=count_scale, noise_floor=adderr)
                     # Optimal
+                    '''
+                    last_profile = ((spat_img >= (trace - 1.0 * box_rad)) & (spat_img <= (trace + 1.0 * box_rad)))
+                    last_profile = last_profile.astype(float)
+                    '''
                     extract.extract_optimal(sciimg, modelivar, (outmask & objmask), waveimg,
                                             skyimage, thismask, last_profile, box_rad, sobjs[iobj],
                                             base_var=base_var, count_scale=count_scale,
                                             noise_floor=adderr)
+                    from matplotlib import pyplot as plt
+                    plt.clf()
+                    ax = plt.gca()
+                    ax.plot(sobjs[iobj].BOX_COUNTS)
+                    ax.plot(sobjs[iobj].OPT_COUNTS)
+                    plt.show()
+                    embed(header='772 of reduce')
+
                     # If the extraction is bad do not update
                     if sobjs[iobj].OPT_MASK is not None:
                         # if there is only one good pixel `extract.fit_profile` fails

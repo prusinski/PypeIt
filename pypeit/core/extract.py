@@ -130,7 +130,8 @@ def extract_optimal(sciimg, ivar, mask, waveimg, skyimg, thismask, oprof, box_ra
     ivar_denom = np.nansum(mask_sub*oprof_sub, axis=1)
     mivar_num = np.nansum(mask_sub*ivar_sub*oprof_sub**2, axis=1)
     mivar_opt = mivar_num/(ivar_denom + (ivar_denom == 0.0))
-    flux_opt = np.nansum(mask_sub*ivar_sub*img_sub*oprof_sub, axis=1)/(mivar_num + (mivar_num == 0.0))
+    flux_opt = np.nansum(mask_sub*ivar_sub*img_sub*oprof_sub, axis=1)/(
+        mivar_num + (mivar_num == 0.0))
     # Optimally extracted noise variance (sky + read noise) only. Since
     # this variance is not the same as that used for the weights, we
     # don't get the usual cancellation. Additional denom factor is the
@@ -199,6 +200,65 @@ def extract_optimal(sciimg, ivar, mask, waveimg, skyimg, thismask, oprof, box_ra
     spec.OPT_FRAC_USE = frac_use    # Fraction of pixels in the object profile subimage used for this extraction
     spec.OPT_CHI2 = chi2            # Reduced chi2 of the model fit for this spectral pixel
 
+    debug = False
+    if debug:
+        # Spot checking
+        from matplotlib import pyplot as plt
+        from astropy.modeling.models import Gaussian1D
+        from astropy.stats import sigma_clip, mad_std
+
+        '''
+        # 2D
+        flux_select = (sciimg - skyimg) * mask
+        err_select = 1/np.sqrt(ivar)* mask
+        chi_select = (sciimg - skyimg) * np.sqrt(ivar) * mask
+        bins=np.arange(chi_select[chi_select!=0].min(), chi_select[chi_select!=0].max(), 0.1)
+
+        plt.clf()
+        ax2 = plt.gca()
+        hist_n, hist_bins, _ = ax2.hist(chi_select[chi_select!=0], bins=bins, histtype='stepfilled')
+        mod_mods=Gaussian1D(amplitude=hist_n.max(), mean=np.median(chi_select[chi_select!=0]), stddev=1.)
+        ax2.plot(bins, mod_mods(bins), label=r"Gaussian ($\sigma=1$)")
+        ax2.axvline(0, ls='dotted', color='Gray')
+        ax2.set_xlim(hist_bins[:-1][hist_n > 10].min(), hist_bins[:-1][hist_n > 10].max())
+        ax2.set_ylim(-0.02, hist_n.max()*1.5)
+        ax2.set_xlabel(r'(sciimg - skymodel) * sqrt(ivarmodel) * (bpmmask == 0)')
+        ax2.set_ylabel(r'#')
+        err_over_flux = (np.median(err_select[flux_select!=0])/mad_std(flux_select[flux_select!=0]))
+        ax2.text(0.99, 0.95, r'Median Noise= {:.1f} - Flux RMS= {:.1f} --> {:.2f}x'.format(np.median(err_select[flux_select!=0]), mad_std(flux_select[flux_select!=0]), err_over_flux), color='k', fontsize=9, horizontalalignment='right', transform=ax2.transAxes)
+        ax2.text(0.99, 0.90, r'Chi:  Median = {:.2f}, Std = {:.2f}'.format(np.median(chi_select[chi_select!=0]), mad_std(chi_select[chi_select!=0])), color='k', fontsize=12, horizontalalignment='right', transform=ax2.transAxes, weight='bold')
+        plt.show()
+        '''
+
+        # 1D
+        flux = flux_opt 
+        err = np.sqrt(utils.inverse(mivar_opt))
+
+        ratio = flux/err
+        isf = np.isfinite(ratio)
+        ratio = ratio[isf]
+
+        plt.clf()
+        ax2 = plt.gca()
+        ax2.minorticks_on()
+        bins=np.arange(ratio.min(), ratio.max(), 0.1)
+        hist_n, hist_bins, _ = ax2.hist(ratio, bins=bins, histtype='stepfilled')
+        mod_mods=Gaussian1D(amplitude=hist_n.max(), mean=np.median(ratio), stddev=1.)
+        ax2.plot(bins, mod_mods(bins), label=r"Gaussian ($\sigma=1$)")
+        ax2.axvline(0, ls='dotted', color='Gray')
+        ax2.set_xlim(hist_bins[:-1][hist_n > 10].min()*2, hist_bins[:-1][hist_n > 10].max()*2)
+        ax2.set_ylim(-0.02, hist_n.max()*1.5)
+        ax2.set_xlabel(r'Flux/Noise')
+        ax2.set_ylabel(r'#')
+        err_over_flux = (np.median(err)/mad_std(flux))
+        ax2.text(0.99, 0.95, r'Median Noise= {:.1f} - Flux RMS= {:.1f} --> {:.2f}x'.format(
+            np.median(err), mad_std(flux), err_over_flux), color='k', fontsize=9, horizontalalignment='right', transform=ax2.transAxes)
+        ax2.text(0.99, 0.90, r'Chi:  Median = {:.2f}, Std = {:.2f}'.format(np.median(ratio), mad_std(ratio)), color='k', fontsize=12, horizontalalignment='right', transform=ax2.transAxes, weight='bold')
+        ax2.legend(loc=2)
+        plt.show()
+        embed(header='259 of extract')
+        
+
 
 def extract_boxcar(sciimg, ivar, mask, waveimg, skyimg, box_radius, spec, base_var=None,
                    count_scale=None, noise_floor=None):
@@ -262,7 +322,8 @@ def extract_boxcar(sciimg, ivar, mask, waveimg, skyimg, box_radius, spec, base_v
                                             noise_floor=noise_floor)
 
     # Fill in the boxcar extraction tags
-    flux_box = moment1d(imgminsky*mask, spec.TRACE_SPAT, 2*box_radius, row=spec.trace_spec)[0]
+    flux_box = moment1d(imgminsky*mask, spec.TRACE_SPAT, 2*box_radius, 
+                        row=spec.trace_spec)[0]
     # Denom is computed in case the trace goes off the edge of the image
     box_denom = moment1d(waveimg*mask > 0.0, spec.TRACE_SPAT, 2*box_radius,
                          row=spec.trace_spec)[0]
@@ -292,6 +353,67 @@ def extract_boxcar(sciimg, ivar, mask, waveimg, skyimg, box_radius, spec, base_v
 
     ivar_box = 1.0/(var_box + (var_box == 0.0))
     nivar_box = None if nvar_box is None else 1.0/(nvar_box + (nvar_box == 0.0))
+
+    debug = False
+    if debug:
+        # Spot checking
+        tst_fx = np.sum((imgminsky*mask)[2048, 992-12:992+12])
+        tst_var = np.sum((varimg*mask)[2048, 992-12:992+12])
+
+        
+        from matplotlib import pyplot as plt
+        from astropy.modeling.models import Gaussian1D
+        from astropy.stats import sigma_clip, mad_std
+
+        # 2D
+        flux_select = (sciimg - skyimg) * mask
+        err_select = 1/np.sqrt(ivar)* mask
+        chi_select = (sciimg - skyimg) * np.sqrt(ivar) * mask
+        bins=np.arange(chi_select[chi_select!=0].min(), chi_select[chi_select!=0].max(), 0.1)
+
+        plt.clf()
+        ax2 = plt.gca()
+        hist_n, hist_bins, _ = ax2.hist(chi_select[chi_select!=0], bins=bins, histtype='stepfilled')
+        mod_mods=Gaussian1D(amplitude=hist_n.max(), mean=np.median(chi_select[chi_select!=0]), stddev=1.)
+        ax2.plot(bins, mod_mods(bins), label=r"Gaussian ($\sigma=1$)")
+        ax2.axvline(0, ls='dotted', color='Gray')
+        ax2.set_xlim(hist_bins[:-1][hist_n > 10].min(), hist_bins[:-1][hist_n > 10].max())
+        ax2.set_ylim(-0.02, hist_n.max()*1.5)
+        ax2.set_xlabel(r'(sciimg - skymodel) * sqrt(ivarmodel) * (bpmmask == 0)')
+        ax2.set_ylabel(r'#')
+        err_over_flux = (np.median(err_select[flux_select!=0])/mad_std(flux_select[flux_select!=0]))
+        ax2.text(0.99, 0.95, r'Median Noise= {:.1f} - Flux RMS= {:.1f} --> {:.2f}x'.format(np.median(err_select[flux_select!=0]), mad_std(flux_select[flux_select!=0]), err_over_flux), color='k', fontsize=9, horizontalalignment='right', transform=ax2.transAxes)
+        ax2.text(0.99, 0.90, r'Chi:  Median = {:.2f}, Std = {:.2f}'.format(np.median(chi_select[chi_select!=0]), mad_std(chi_select[chi_select!=0])), color='k', fontsize=12, horizontalalignment='right', transform=ax2.transAxes, weight='bold')
+        plt.show()
+
+        # 1D
+        flux = flux_box * mask_box
+        err = np.sqrt(utils.inverse(ivar_box*mask_box))
+        #err /= np.sqrt(box_radius)
+        ratio = flux/err
+        isf = np.isfinite(ratio)
+        ratio = ratio[isf]
+
+        plt.clf()
+        ax2 = plt.gca()
+        ax2.minorticks_on()
+        bins=np.arange(ratio.min(), ratio.max(), 0.1)
+        hist_n, hist_bins, _ = ax2.hist(ratio, bins=bins, histtype='stepfilled')
+        mod_mods=Gaussian1D(amplitude=hist_n.max(), mean=np.median(ratio), stddev=1.)
+        ax2.plot(bins, mod_mods(bins), label=r"Gaussian ($\sigma=1$)")
+        ax2.axvline(0, ls='dotted', color='Gray')
+        ax2.set_xlim(hist_bins[:-1][hist_n > 10].min()*2, hist_bins[:-1][hist_n > 10].max()*2)
+        ax2.set_ylim(-0.02, hist_n.max()*1.5)
+        ax2.set_xlabel(r'Flux/Noise')
+        ax2.set_ylabel(r'#')
+        err_over_flux = (np.median(err)/mad_std(flux))
+        ax2.text(0.99, 0.95, r'Median Noise= {:.1f} - Flux RMS= {:.1f} --> {:.2f}x'.format(
+            np.median(err), mad_std(flux), err_over_flux), color='k', fontsize=9, horizontalalignment='right', transform=ax2.transAxes)
+        ax2.text(0.99, 0.90, r'Chi:  Median = {:.2f}, Std = {:.2f}'.format(np.median(ratio), mad_std(ratio)), color='k', fontsize=12, horizontalalignment='right', transform=ax2.transAxes, weight='bold')
+        ax2.legend(loc=2)
+        plt.show()
+        embed(header='296 of extract')
+        
 
     # Fill em up!
     spec.BOX_WAVE = wave_box
