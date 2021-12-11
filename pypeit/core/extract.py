@@ -73,20 +73,10 @@ def extract_optimal(sciimg, ivar, mask, waveimg, skyimg, thismask, oprof, box_ra
         The "base-level" variance in the data set by the detector properties and
         the image processing steps.  See
         :func:`~pypeit.core.procimg.base_variance`.
-    count_scale : :obj:`float`, `numpy.ndarray`_, optional
-        A scale factor, :math:`s`, that *has already been applied* to the
-        provided science image.  For example, if the image has been flat-field
-        corrected, this is the inverse of the flat-field counts.  If None, set
-        to 1.  If a single float, assumed to be constant across the full image.
-        If an array, the shape must match ``base_var``.  The variance will be 0
-        wherever :math:`s \leq 0`, modulo the provided ``adderr``.  This is one
-        of the components needed to construct the model variance; see
-        ``model_noise``.
-    noise_floor : :obj:`float`, optional
-        A fraction of the counts to add to the variance, which has the effect of
-        ensuring that the S/N is never greater than ``1/noise_floor``; see
-        :func:`~pypeit.core.procimg.variance_model`.  If None, no noise floor is
-        added.
+    var_no : `numpy.ndarray`_, shape is (nspec, nspat), optional
+        The "base-level" variance in the data set by the detector properties and
+        the image processing steps.  See
+        :func:`~pypeit.core.procimg.base_variance`.
     """
     # Setup
     imgminsky = sciimg - skyimg
@@ -97,9 +87,9 @@ def extract_optimal(sciimg, ivar, mask, waveimg, skyimg, thismask, oprof, box_ra
     spat_vec = np.arange(nspat)
 
     # TODO This makes no sense for difference imaging? Not sure we need NIVAR anyway
-    var_no = None if base_var is None \
-                else procimg.variance_model(base_var, counts=skyimg, count_scale=count_scale,
-                                            noise_floor=noise_floor)
+    #var_no = None if base_var is None \
+    #            else procimg.variance_model(base_var, counts=skyimg, count_scale=count_scale,
+    #                                        noise_floor=noise_floor)
 
     ispec, ispat = np.where(oprof > 0.0)
 
@@ -193,7 +183,7 @@ def extract_optimal(sciimg, ivar, mask, waveimg, skyimg, thismask, oprof, box_ra
     spec.OPT_COUNTS = flux_opt    # Optimally extracted flux
     spec.OPT_COUNTS_IVAR = mivar_opt   # Inverse variance of optimally extracted flux using modelivar image
     spec.OPT_COUNTS_SIG = np.sqrt(utils.inverse(mivar_opt))
-    spec.OPT_COUNTS_NIVAR = nivar_opt  # Optimally extracted noise variance (sky + read noise) only
+    spec.OPT_COUNTS_NIVAR = nivar_opt  # Optimally extracted noise variance (sky + detector noise) only
     spec.OPT_MASK = mask_opt    # Mask for optimally extracted flux
     spec.OPT_COUNTS_SKY = sky_opt      # Optimally extracted sky
     spec.OPT_COUNTS_SIG_DET = base_opt      # Square root of optimally extracted read noise squared
@@ -202,7 +192,6 @@ def extract_optimal(sciimg, ivar, mask, waveimg, skyimg, thismask, oprof, box_ra
 
     debug = False
     if debug:
-        # Spot checking
         from matplotlib import pyplot as plt
         from astropy.modeling.models import Gaussian1D
         from astropy.stats import sigma_clip, mad_std

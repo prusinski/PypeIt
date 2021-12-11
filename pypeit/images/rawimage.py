@@ -229,6 +229,11 @@ class RawImage:
                                      noise_floor=self.par['noise_floor'])
         return utils.inverse(var)
 
+    def build_novar(self, skyimg):
+        novar = procimg.variance_model(self.base_var, counts=skyimg, 
+            count_scale=self.img_scale, noise_floor=self.par['noise_floor'])
+        return novar
+
     def estimate_readnoise(self):
         """
         Estimate the readnoise (in electrons) based on the overscan regions of

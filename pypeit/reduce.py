@@ -291,9 +291,12 @@ class Reduce:
                 # Do it
                 box_rad = self.par['reduce']['extraction']['boxcar_radius']/plate_scale
                 extract.extract_boxcar(self.sciImg.image, self.sciImg.ivar, inmask, self.waveimg,
-                                       global_sky, box_rad, sobj, base_var=self.sciImg.base_var,
-                                       count_scale=self.sciImg.img_scale,
-                                       noise_floor=self.sciImg.noise_floor)
+                                       global_sky, box_rad, sobj, 
+                                       base_var=self.sciImg.base_var,
+                                       no_var=self.sciImg.build_novar(global_sky))
+                                       #base_var=self.sciImg.base_var,
+                                       #count_scale=self.sciImg.img_scale,
+                                       #noise_floor=self.sciImg.noise_floor)
 
             # Fill up extra bits and pieces
             self.objmodel = np.zeros_like(self.sciImg.image)
