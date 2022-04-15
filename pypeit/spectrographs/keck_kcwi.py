@@ -304,7 +304,10 @@ class KeckKCWISpectrograph(spectrograph.Spectrograph):
             try:
                 return headarr[0]['ELAPTIME']
             except KeyError:
-                return headarr[0]['TELAPSE']
+                try:
+                    return headarr[0]['TELAPSE']
+                except KeyError:
+                    return headarr[0]['XPOSURE']
         elif meta_key == 'slitwid':
             # Get the slice scale
             slicescale = 0.00037718  # Degrees per 'large slicer' slice
@@ -330,20 +333,20 @@ class KeckKCWISpectrograph(spectrograph.Spectrograph):
             try:
                 return headarr[0]['WXPRESS'] * 0.001  # Must be in astropy.units.bar
             except KeyError:
-                msgs.warn("Pressure is not in header")
-                return 0.0
+                msgs.warn("Pressure is not in header. Using default value from pyDRP: 0.611 bar")
+                return 0.611
         elif meta_key == 'temperature':
             try:
                 return headarr[0]['WXOUTTMP']  # Must be in astropy.units.deg_C
             except KeyError:
-                msgs.warn("Temperature is not in header")
-                return 0.0
+                msgs.warn("Temperature is not in header. Using default value from pyDRP: 10 deg C")
+                return 10.0
         elif meta_key == 'humidity':
             try:
                 return headarr[0]['WXOUTHUM'] / 100.0
             except KeyError:
-                msgs.warn("Humidity is not in header")
-                return 0.0
+                msgs.warn("Humidity is not in header. Using default value from pyDRP: 50%")
+                return 0.5
         elif meta_key == 'obstime':
             return Time(headarr[0]['DATE-END'])
         else:
